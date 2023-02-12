@@ -51,6 +51,7 @@ public class JiCash {
                     // Enter new Account details
                     System.out.println();
                     methods.LoadingAnim("Preparing");
+                    System.out.println();
 
                     boolean boolFirstName = false;
                     while (!boolFirstName) {
