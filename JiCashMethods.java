@@ -16,7 +16,7 @@ public class JiCashMethods {
     }
 
     double BankTransfer(double currentBalance, double paidMoney, String bankName) {
-        currentBalance = currentBalance - paidMoney;
+        currentBalance = currentBalance - paidMoney - 15;
         return currentBalance;
     }
 
