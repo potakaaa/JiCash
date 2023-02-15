@@ -48,6 +48,7 @@ public class JiCash {
                 try {
                     Connection con = DriverManager.getConnection(databaseURL, username, password);
                     Statement st = con.createStatement();
+                    ResultSet rs = st.executeQuery("select * from jicashaccount");
                     // Enter new Account details
                     System.out.println();
                     methods.LoadingAnim("Preparing");
@@ -75,6 +76,12 @@ public class JiCash {
                         }
                     }
 
+                    String[] accNumberList = new String[100]; int id = 0;
+                    while(rs.next()) {
+                        accNumberList[id] = rs.getString("AccountNumber");
+                        id++;
+                    }
+
                     boolean boolAccountNumber = false;
                     while (!boolAccountNumber) {
                         System.out.print("Mobile Number: ");
@@ -82,7 +89,22 @@ public class JiCash {
                         if (AccountNumber.matches(".*[a-zA-Z].*")) {
                             methods.ErrorCode04("Mobile Number");
                         } else if (AccountNumber.length() == 11 && AccountNumber.matches(".*[0-9].*")) {
-                            boolAccountNumber = true;
+                            if (AccountNumber.startsWith("09")) {
+                                boolean boolNewNumberValidator = false;
+                                for (int i = 0; i < accNumberList.length; i++) {
+                                    if (AccountNumber.equals(accNumberList[i])) {
+                                        boolNewNumberValidator = true;
+                                    }
+                                } if (boolNewNumberValidator) {
+                                    System.out.println("Number already exists!");
+                                    System.out.println();
+                                } else {
+                                    boolAccountNumber = true;
+                                }
+                            } else {
+                                System.out.println("Mobile Number should start with '09'!");
+                                System.out.println();
+                            }
                         } else {
                             methods.ErrorCode05("Mobile Number");
                         }
@@ -260,66 +282,76 @@ public class JiCash {
                     // Declare variables in advance to call them later
                     boolean boolSendMoneyName = false; double sendMoney = 0; boolean boolRecMobNumValidator = false;
                     String recFirstName = ""; String recLastName = ""; String recMobNum = ""; double recCurrentBalance = 0;
+
                     while (!boolSendMoneyName) {
                         System.out.println();
                         System.out.print("Enter Receiver Mobile Number: ");
                         recMobNum = sc3.nextLine();
-                        for (int i = 0; i < accNumberList.length; i++) {
-                            if (recMobNum.equals(accNumberList[i])) {
-                                recFirstName = firstNameList[i];
-                                recLastName = lastNameList[i];
-                                recCurrentBalance = accountCash[i];
-                                boolRecMobNumValidator = true;
-                            }
-                        } if (boolRecMobNumValidator) {
-                            boolSendMoneyName = true;
-                        } else {
-                            System.out.println("No existing credentials!");
-                            System.out.println();
-                        }
-
-                        boolean boolSendMoney = false;
-                        while (!boolSendMoney) {
-                            System.out.println();
-                            System.out.print("Enter Money To Be Sent: ");
-                            try {
-                                sendMoney = sc3.nextDouble();
-                                if (sendMoney > AccCash) {
-                                    System.out.println("Insufficient Funds!");
-                                } else {
-                                    boolSendMoney = true;
+                        if (recMobNum.matches(".*[a-zA-Z].*")) {
+                            methods.ErrorCode04("Mobile Number");
+                        } else if (recMobNum.equals(AccountNumber)) {
+                            System.out.println("Invalid Number!");
+                        } else if (recMobNum.length() == 11 && recMobNum.matches(".*[0-9].*")) {
+                            for (int i = 0; i < accNumberList.length; i++) {
+                                if (recMobNum.equals(accNumberList[i])) {
+                                    recFirstName = firstNameList[i];
+                                    recLastName = lastNameList[i];
+                                    recCurrentBalance = accountCash[i];
+                                    boolRecMobNumValidator = true;
+                                    boolSendMoneyName = true;
                                 }
-                            } catch (InputMismatchException e) {
-                                methods.ErrorCode04("Send Money");
-                                sc3.nextLine();
                             }
-                        }
-                        System.out.println();
-                        System.out.println("Receiver: " + recLastName + ", " + recFirstName);
-                        System.out.println("Amount: " + sendMoney);
-                        boolean boolPINConfirm = false;
-                        while (!boolPINConfirm) {
-                            System.out.print("Enter PIN to Confirm: ");
-                            String confirmPIN = sc4.nextLine();
-                            if (confirmPIN.equals(AccPIN)) {
-                                boolPINConfirm = true;
+                            if (boolRecMobNumValidator) {
+                                break;
                             } else {
-                                System.out.println("WRONG PIN! Try Again");
+                                System.out.println("No existing credentials!");
                                 System.out.println();
                             }
+                        } else {
+                            methods.ErrorCode05("Receiver Mobile Number");
                         }
-                        AccCash = methods.SendMoney(AccCash, sendMoney, recFirstName);
-                        double recNewBalance = recCurrentBalance + sendMoney;
-
-                        String updateRecBalance = "UPDATE jicashaccount SET AccountCash = " + recNewBalance + "WHERE AccountNumber = " + recMobNum;
-                        String updateMyBalance = "UPDATE jicashaccount SET AccountCash = " + AccCash + "WHERE AccountNumber = " + AccountNumber;
-                        int val = st.executeUpdate(updateRecBalance);
-                        int val2 = st.executeUpdate(updateMyBalance);
-
-                        methods.LoadingAnim("Updating Balance");
-                        System.out.println();
-                        System.out.println("Successfuly sent!");
                     }
+                    boolean boolSendMoney = false;
+                    while (!boolSendMoney) {
+                        System.out.println();
+                        System.out.print("Enter Money To Be Sent: ");
+                        try {
+                            sendMoney = sc3.nextDouble();
+                            if (sendMoney > AccCash) {
+                                System.out.println("Insufficient Funds!");
+                            } else {
+                                boolSendMoney = true;
+                            }
+                        } catch (InputMismatchException e) {
+                            methods.ErrorCode04("Send Money");
+                            sc3.nextLine();
+                        }
+                    }
+                    System.out.println();
+                    System.out.println("Receiver: " + recLastName + ", " + recFirstName);
+                    System.out.println("Amount: " + sendMoney);
+                    boolean boolPINConfirm = false;
+                    while (!boolPINConfirm) {
+                        System.out.print("Enter PIN to Confirm: ");
+                        String confirmPIN = scPIN.nextLine();
+                        if (confirmPIN.equals(AccPIN)) {
+                            boolPINConfirm = true;
+                        } else {
+                            System.out.println("WRONG PIN! Try Again");
+                            System.out.println();
+                        }
+                    }
+                    AccCash = methods.SendMoney(AccCash, sendMoney, recFirstName);
+                    double recNewBalance = recCurrentBalance + sendMoney;
+
+                    String updateRecBalance = "UPDATE jicashaccount SET AccountCash = " + recNewBalance + "WHERE AccountNumber = " + recMobNum;
+                    String updateMyBalance = "UPDATE jicashaccount SET AccountCash = " + AccCash + "WHERE AccountNumber = " + AccountNumber;
+                    int val = st.executeUpdate(updateRecBalance);
+                    int val2 = st.executeUpdate(updateMyBalance);
+
+                    methods.LoadingAnim("Updating Balance");
+                    System.out.println();
+                    System.out.println("Successfuly sent!");
                 } else if (homePageCode.equalsIgnoreCase("dm")) {
                     double depMoney = 0; boolean boolDepMoney = false;
                     while(!boolDepMoney) {
@@ -351,11 +383,10 @@ public class JiCash {
                             System.out.println();
                         }
                     }
-                    AccCash = AccCash + depMoney;
+                    AccCash = methods.DepositMoney(AccCash, depMoney);
                     String updateAcc = "UPDATE jicashaccount SET AccountCash = " + AccCash + "WHERE AccountNumber = " + AccountNumber;
                     int val = st.executeUpdate(updateAcc);
                     methods.LoadingAnim("Updating Balance");
-                    System.out.println();
                     System.out.println();
                     System.out.println("Successfuly Deposited!");
                 } else if (homePageCode.equalsIgnoreCase("bp")) {
@@ -435,7 +466,7 @@ public class JiCash {
                         }
                     }
 
-                    AccCash = AccCash - billAmount;
+                    AccCash = methods.BillsPayment(AccCash, billAmount, biller);
                     String updateAcc = "UPDATE jicashaccount SET AccountCash = " + AccCash + "WHERE AccountNumber = " + AccountNumber;
                     int val2 = st.executeUpdate(updateAcc);
                     methods.LoadingAnim("Updating Balance");
@@ -535,7 +566,7 @@ public class JiCash {
                             System.out.println();
                         }
                     }
-                    AccCash = AccCash - totalBankAmount;
+                    AccCash = methods.BankTransfer(AccCash, bankAmount, bankName);
                     String updateAcc = "UPDATE jicashaccount SET AccountCash = " + AccCash + "WHERE AccountNumber = " + AccountNumber;
                     int val3 = st.executeUpdate(updateAcc);
                     methods.LoadingAnim("Updating Balance");
